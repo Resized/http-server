@@ -1,4 +1,4 @@
-package main
+package http_server
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var mostCommonSize = 3
+var mostCommonSize = 2
 var serverMostCommonWords map[string]int
 var serverWords map[string]int
 
@@ -23,23 +23,23 @@ func add(w http.ResponseWriter, req *http.Request) {
 		serverWords[word]++
 		if _, ok := serverMostCommonWords[word]; ok {
 			serverMostCommonWords[word]++
-		} else {
-			if len(serverMostCommonWords) < mostCommonSize {
-				serverMostCommonWords[word] = serverWords[word]
-			} else {
-				smallestWordSize := serverWords[word]
-				smallestWord := word
-				for commonWord, _ := range serverMostCommonWords {
-					if serverMostCommonWords[commonWord] < smallestWordSize {
-						smallestWordSize = serverMostCommonWords[commonWord]
-						smallestWord = commonWord
-					}
-				}
-				if serverWords[word] > smallestWordSize {
-					delete(serverMostCommonWords, smallestWord)
-					serverMostCommonWords[word] = serverWords[word]
-				}
+			continue
+		}
+		if len(serverMostCommonWords) < mostCommonSize {
+			serverMostCommonWords[word] = serverWords[word]
+			continue
+		}
+		smallestWordSize := serverWords[word]
+		smallestWord := word
+		for commonWord := range serverMostCommonWords {
+			if serverMostCommonWords[commonWord] < smallestWordSize {
+				smallestWordSize = serverMostCommonWords[commonWord]
+				smallestWord = commonWord
 			}
+		}
+		if serverWords[word] > smallestWordSize {
+			delete(serverMostCommonWords, smallestWord)
+			serverMostCommonWords[word] = serverWords[word]
 		}
 	}
 
@@ -65,9 +65,21 @@ func init() {
 	fmt.Println("Starting the application...")
 	serverWords = make(map[string]int)
 	serverMostCommonWords = make(map[string]int, mostCommonSize)
+
+	http.HandleFunc("/add", add)
+	http.HandleFunc("/status", status)
+
+	err := http.ListenAndServe(":8090", nil)
+	if err != nil {
+		panic(err)
+	}
 }
 
-func main() {
+func Run() {
+	fmt.Println("Starting the application...")
+	serverWords = make(map[string]int)
+	serverMostCommonWords = make(map[string]int, mostCommonSize)
+
 	http.HandleFunc("/add", add)
 	http.HandleFunc("/status", status)
 
